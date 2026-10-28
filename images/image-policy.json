@@ -1,0 +1,8 @@
+{
+  "evidence": {
+    "scanner": "trivy",
+    "blocked_severities": [
+      "CRITICAL"
+    ]
+  }
+}

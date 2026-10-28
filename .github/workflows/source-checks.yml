@@ -1,0 +1,30 @@
+name: CSI source checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 images/test_build.py
+      - name: Check pinned local inputs
+        run: |
+          python3 - <<'PYCODE'
+          import hashlib, json, pathlib
+          root = pathlib.Path('images')
+          lock = json.loads((root / 'build-lock.json').read_text())
+          def sha(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          assert sha(root / 'image-policy.json') == lock['policy_snapshot']['sha256']
+          for name, component in lock['components'].items():
+              for file, expected in component['locks'].items():
+                  assert sha(root / (name + '-' + file)) == expected
+          PYCODE

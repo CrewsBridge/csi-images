@@ -1,0 +1,246 @@
+{
+  "schema": "peersbridge.csi-image-build.v1",
+  "platform": "linux/amd64",
+  "policy_ref": "APP:v2/contracts/build/trusted-ci-release.json#evidence",
+  "go": {
+    "version": "go1.26.10",
+    "archives": {
+      "darwin/amd64": {
+        "url": "https://go.dev/dl/go1.26.10.darwin-amd64.tar.gz",
+        "sha256": "e820ab780c273ae4a340b79d0f3c4313b74ee029aa3874792145d44b9f4f91da"
+      },
+      "darwin/arm64": {
+        "url": "https://go.dev/dl/go1.26.10.darwin-arm64.tar.gz",
+        "sha256": "0b5183492292ada170f9b561a834863808dd02edba599e4ad0e89899330020b3"
+      },
+      "linux/amd64": {
+        "url": "https://go.dev/dl/go1.26.10.linux-amd64.tar.gz",
+        "sha256": "ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5"
+      },
+      "linux/arm64": {
+        "url": "https://go.dev/dl/go1.26.10.linux-arm64.tar.gz",
+        "sha256": "3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797"
+      }
+    }
+  },
+  "components": {
+    "nfs": {
+      "binary": "nfsplugin",
+      "version": "v4.13.6-pb.1",
+      "source": {
+        "url": "https://codeload.github.com/kubernetes-csi/csi-driver-nfs/tar.gz/ef097104fe8d06ee3f8a81cb04be39f6eba0ff6f",
+        "sha256": "737f1a60d66301613f9113f3cdcb864645e9edbfed4b7d9347353c269d14be1b",
+        "repository": "https://github.com/kubernetes-csi/csi-driver-nfs",
+        "commit": "ef097104fe8d06ee3f8a81cb04be39f6eba0ff6f"
+      },
+      "locks": {
+        "go.mod": "d587dce96dbfd887e0c9171c15c9dede64ab1ec3f1c693a10a9ba561988b57b7",
+        "go.sum": "991219250106ecf12aa152a0a14ea19474379c8b7e8fd6035e90e4e2e1474fa8"
+      },
+      "ldflags": "-s -w -X github.com/kubernetes-csi/csi-driver-nfs/pkg/nfs.driverVersion=v4.13.6-pb.1 -X github.com/kubernetes-csi/csi-driver-nfs/pkg/nfs.gitCommit=ef097104fe8d06ee3f8a81cb04be39f6eba0ff6f -X github.com/kubernetes-csi/csi-driver-nfs/pkg/nfs.buildDate=2026-10-28T00:00:00Z"
+    },
+    "registrar": {
+      "binary": "csi-node-driver-registrar",
+      "version": "v2.18.0-pb.1",
+      "source": {
+        "url": "https://codeload.github.com/kubernetes-csi/node-driver-registrar/tar.gz/6f4e96f4222783370e4d2f3e3fc733b49c194a5f",
+        "sha256": "3e1eeba4148bb96cd28001eaa2ed32773d97a2b5d94f74b4639601012f7b0733",
+        "repository": "https://github.com/kubernetes-csi/node-driver-registrar",
+        "commit": "6f4e96f4222783370e4d2f3e3fc733b49c194a5f"
+      },
+      "locks": {
+        "go.mod": "f61b7f69394a2867215d2ac0dbe6ff3fa1856f91fe90bd1c7274cf7342e6a998",
+        "go.sum": "3f4fa3aba9f2c72b292f0e3b9bb7c3670e1f53ce2d7015867f8e532347eafd37"
+      },
+      "ldflags": "-s -w -X main.version=v2.18.0-pb.1"
+    },
+    "liveness": {
+      "binary": "livenessprobe",
+      "version": "v2.20.0-pb.1",
+      "source": {
+        "url": "https://codeload.github.com/kubernetes-csi/livenessprobe/tar.gz/08d74914607a0574a300d311c441eca5cd609687",
+        "sha256": "e6a5d483db2fbf29259f1e7be31a3a5a5f3308959a9043b64426ad932ad1ac94",
+        "repository": "https://github.com/kubernetes-csi/livenessprobe",
+        "commit": "08d74914607a0574a300d311c441eca5cd609687"
+      },
+      "locks": {
+        "go.mod": "b84597649eb342d8a3656ea9d6cfad4bc3b6794be4adca3c699d3e24187b0a74",
+        "go.sum": "c72d12852d4c8092ae8c66d6c41d0372c2689d047d73d7e1ed2032343e7fbcec"
+      },
+      "ldflags": "-s -w -X main.version=v2.20.0-pb.1"
+    }
+  },
+  "nfs_runtime": {
+    "base": "docker.io/library/debian@sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31",
+    "packages": [
+      {
+        "url": "https://deb.debian.org/debian/pool/main/e/e2fsprogs/libcom-err2_1.47.2-3%2bb12_amd64.deb",
+        "filename": "libcom-err2_1.47.2-3+b12_amd64.deb",
+        "sha256": "bd43e020b8fed399db3eebf098111f10fba4c436fff99ccad72cc7e27c9764ec"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/dmsetup_1.02.205-2_amd64.deb",
+        "filename": "dmsetup_2%3a1.02.205-2_amd64.deb",
+        "sha256": "4771f7ab0a907a8e5d02a6358ff016ae7cb49124906bada02fa882e141b615a0"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/libdevmapper1.02.1_1.02.205-2_amd64.deb",
+        "filename": "libdevmapper1.02.1_2%3a1.02.205-2_amd64.deb",
+        "sha256": "e924e0df8823987f271b7d3a375dc2f8adcd76db66f09d0273043c885edb0af0"
+      },
+      {
+        "url": "https://deb.debian.org/debian-security/pool/updates/main/libe/libevent/libevent-core-2.1-7t64_2.1.13-stable-1%7edeb13u1_amd64.deb",
+        "filename": "libevent-core-2.1-7t64_2.1.13-stable-1~deb13u1_amd64.deb",
+        "sha256": "faa7d20cc8fa05ac3b0497065fa60bc920eacd3711ff039649d43a7aa34421ce"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/krb5/libkrb5support0_1.21.3-5%2bdeb13u1_amd64.deb",
+        "filename": "libkrb5support0_1.21.3-5+deb13u1_amd64.deb",
+        "sha256": "3a0acd8b37955c0e102c756b52c97df2a31f67b96453c35dab70df218d309117"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/krb5/libk5crypto3_1.21.3-5%2bdeb13u1_amd64.deb",
+        "filename": "libk5crypto3_1.21.3-5+deb13u1_amd64.deb",
+        "sha256": "7da07ee674b47f1f0be7cc89317c25310086a1f1761217d0f72e6ae2c5a69b84"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/keyutils/libkeyutils1_1.6.3-6_amd64.deb",
+        "filename": "libkeyutils1_1.6.3-6_amd64.deb",
+        "sha256": "0b11ad17be0300b63ad4eeb4c6450fed24d34b7b740f23e5363dcb29ee6d5eba"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/krb5/libkrb5-3_1.21.3-5%2bdeb13u1_amd64.deb",
+        "filename": "libkrb5-3_1.21.3-5+deb13u1_amd64.deb",
+        "sha256": "47d71d6a7f2e59b9bae5f89602397594805113b95889ad18fa703cd53abafc97"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/krb5/libgssapi-krb5-2_1.21.3-5%2bdeb13u1_amd64.deb",
+        "filename": "libgssapi-krb5-2_1.21.3-5+deb13u1_amd64.deb",
+        "sha256": "30847c1fde4240567d7ed3aeab4f655dd591203758b857e85e824045aae70299"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/c/cyrus-sasl2/libsasl2-modules-db_2.1.28%2bdfsg1-9_amd64.deb",
+        "filename": "libsasl2-modules-db_2.1.28+dfsg1-9_amd64.deb",
+        "sha256": "a5c38659fbd62c33c6d9bfa2be43e75a572d1818531aad32dd74d0a58cc4bd19"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/c/cyrus-sasl2/libsasl2-2_2.1.28%2bdfsg1-9_amd64.deb",
+        "filename": "libsasl2-2_2.1.28+dfsg1-9_amd64.deb",
+        "sha256": "66e49d7ae026811b49a0050f18b0325960a2625ffd1ff60d91b7844a815fa9d2"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/o/openldap/libldap2_2.6.10%2bdfsg-1_amd64.deb",
+        "filename": "libldap2_2.6.10+dfsg-1_amd64.deb",
+        "sha256": "60069e4a550ca890113fa89d3001417781b18e146ec5d637d31e368dec9909bd"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/n/nfs-utils/libnfsidmap1_2.8.3-1_amd64.deb",
+        "filename": "libnfsidmap1_1%3a2.8.3-1_amd64.deb",
+        "sha256": "62ff66518efc955aea611917a1840fcaa0457047c7a9be3946450d20916280b6"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/libt/libtirpc/libtirpc-common_1.3.6%2bds-1_all.deb",
+        "filename": "libtirpc-common_1.3.6+ds-1_all.deb",
+        "sha256": "300f582e2c9151a8d329568c705cadc76252c417147312fe331c4560d2c7a6c3"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/libt/libtirpc/libtirpc3t64_1.3.6%2bds-1_amd64.deb",
+        "filename": "libtirpc3t64_1.3.6+ds-1_amd64.deb",
+        "sha256": "ef4536c09bf5063554310e22d586ae90990100ba66d2fe7c35660e9e658913b6"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/t/tcp-wrappers/libwrap0_7.6.q-36_amd64.deb",
+        "filename": "libwrap0_7.6.q-36_amd64.deb",
+        "sha256": "cde12afa15d6b1556c5e0564d22edf3b99e6b8fa94c59ccd8b8eebbb62dc19ec"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/a/adduser/adduser_3.152_all.deb",
+        "filename": "adduser_3.152_all.deb",
+        "sha256": "e50984d2e1ef6300e3fd51303839842189a077b10cb5cadff1923df10c61c493"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/r/rpcbind/rpcbind_1.2.7-1_amd64.deb",
+        "filename": "rpcbind_1.2.7-1_amd64.deb",
+        "sha256": "29e6ee5f7737f8678e4ef8c992437ae23e1c7cd67d517bc70e29234dccf13786"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/libt/libtext-charwidth-perl/libtext-charwidth-perl_0.04-11%2bb4_amd64.deb",
+        "filename": "libtext-charwidth-perl_0.04-11+b4_amd64.deb",
+        "sha256": "3a1d44df306e0252e8a16df07eba457bc9f2ef736ee890a1c35ffdfd548eafa0"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/libt/libtext-wrapi18n-perl/libtext-wrapi18n-perl_0.06-10_all.deb",
+        "filename": "libtext-wrapi18n-perl_0.06-10_all.deb",
+        "sha256": "17f98c7c09af8ac3bdbfd5a5dad32f3f51c71b02cdfc411366f49092a395de85"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/n/ncurses/libncursesw6_6.5%2b20250216-2_amd64.deb",
+        "filename": "libncursesw6_6.5+20250216-2_amd64.deb",
+        "sha256": "47baa2e11579583654583a066b69bd5a5d2f22423081f707ed6c0c3ba6d538b7"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/p/procps/libproc2-0_4.0.4-9_amd64.deb",
+        "filename": "libproc2-0_2%3a4.0.4-9_amd64.deb",
+        "sha256": "c9d61caab1b2ddfc3f17edb95be31b9809fcb2daf27d853dff615bc4ebd08b4b"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/p/procps/procps_4.0.4-9_amd64.deb",
+        "filename": "procps_2%3a4.0.4-9_amd64.deb",
+        "sha256": "4db90bb6776772fc52585d6b1fbfc52ec2a85480e1b4363b743fbb2ffa2a5375"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/s/sensible-utils/sensible-utils_0.0.25_all.deb",
+        "filename": "sensible-utils_0.0.25_all.deb",
+        "sha256": "873a9b73c3478cc3148cdbf5cc2084949a0a8e4fa16131d1cbc895d2f1f3470e"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/u/ucf/ucf_3.0052_all.deb",
+        "filename": "ucf_3.0052_all.deb",
+        "sha256": "ab5a6d5a621ad07034ce29d0c2587e6e267ecd2975458b2c8a7d0ada77dcb95b"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/k/keyutils/keyutils_1.6.3-6_amd64.deb",
+        "filename": "keyutils_1.6.3-6_amd64.deb",
+        "sha256": "1ea627932e5ea824b208b8426a918dec7fbf3073a369d19e82e994fbc5f9f151"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/n/nfs-utils/nfs-common_2.8.3-1_amd64.deb",
+        "filename": "nfs-common_1%3a2.8.3-1_amd64.deb",
+        "sha256": "3bf0edc765f16d07a579712e8f40307ad61457eb82fbe928f7a107e7101e3ec1"
+      },
+      {
+        "url": "https://deb.debian.org/debian/pool/main/n/netbase/netbase_6.5_all.deb",
+        "filename": "netbase_6.5_all.deb",
+        "sha256": "76bafa92947ebd37b0a6f9ec6570412041f56edebc1c66d323731216d318471e"
+      },
+      {
+        "url": "https://deb.debian.org/debian-security/pool/updates/main/o/openssl/openssl_3.5.7-1%7edeb13u3_amd64.deb",
+        "filename": "openssl_3.5.7-1~deb13u3_amd64.deb",
+        "sha256": "43a9cbcf2a8a0e1f0a1c3f5a33ee1f56b269690e7a2129f2b2d0582e789589d7"
+      },
+      {
+        "url": "https://deb.debian.org/debian-security/pool/updates/main/c/ca-certificates/ca-certificates_20250419%2bdeb13u1_all.deb",
+        "filename": "ca-certificates_20250419+deb13u1_all.deb",
+        "sha256": "c10585ac22c7f617a73d394eea29ba71d0356f350ae973b19043d1b017f80f54"
+      }
+    ]
+  },
+  "scanner": {
+    "version": "0.76.1",
+    "url": "https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz",
+    "sha256": "c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0"
+  },
+  "policy_snapshot": {
+    "authority": "APP:v2/contracts/build/trusted-ci-release.json#evidence",
+    "repository": "https://github.com/CrewsBridge/peersbridge-app",
+    "commit": "0d041a93d132ffdac6cbe7a11423c57ced29f21a",
+    "path": "v2/contracts/build/trusted-ci-release.json",
+    "sha256": "79fcd75ce8ce73b77d3d67deff4704ab23c5295cb1cf6c125fe9b6cdb876fc4d",
+    "meaning": "Generated consumer excerpt from the immutable named APP contract; APP remains sole authority. The native consumer independently verifies this projection against that source before admission.",
+    "source_sha256": "ae454ee3133b8a99c51625d9f3bb41cebd0752cc5713d935aa4135ee4f3d2686",
+    "projection_keys": [
+      "evidence.scanner",
+      "evidence.blocked_severities"
+    ]
+  }
+}

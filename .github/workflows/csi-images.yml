@@ -1,0 +1,169 @@
+name: Build reviewed CSI images
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed full main commit SHA; publication only, never cluster mutation
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: csi-image-publication
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'CrewsBridge/csi-images' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && github.actor == 'koad7' && github.triggering_actor == 'koad7'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [nfs, registrar, liveness]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prepare pinned scanner and build exact source
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, json, os, pathlib, tarfile
+          root = pathlib.Path('images')
+          spec = importlib.util.spec_from_file_location('csi_build', root / 'build.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          scanner = json.loads((root / 'build-lock.json').read_text())['scanner']
+          target = pathlib.Path(os.environ['RUNNER_TEMP']) / 'scanner'
+          target.mkdir()
+          module.download(scanner, target / 'trivy.tar.gz')
+          with tarfile.open(target / 'trivy.tar.gz') as source:
+              source.extract('trivy', target, filter='data')
+          PY
+          python3 images/build.py \
+            --component "$COMPONENT" --work-dir "$RUNNER_TEMP/csi" \
+            --tag "ws408-csi-$COMPONENT:$GITHUB_SHA" --trivy "$RUNNER_TEMP/scanner/trivy"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: csi-${{ matrix.component }}-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ runner.temp }}/csi/*.log
+            ${{ runner.temp }}/csi/*.json
+            ${{ runner.temp }}/csi/*.txt
+            ${{ runner.temp }}/csi/image.tar
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: csi-image-publication
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [nfs, registrar, liveness]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: csi-${{ matrix.component }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/csi
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify build artifacts and publish the scanned image
+        id: image
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, importlib.util, json, os, pathlib, subprocess
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'csi'
+          source = pathlib.Path('images')
+          lock = json.loads((source / 'build-lock.json').read_text())
+          spec = importlib.util.spec_from_file_location('csi_build', source / 'build.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.digest(source / 'image-policy.json') == lock['policy_snapshot']['sha256']
+          policy = json.loads((source / 'image-policy.json').read_text())['evidence']
+          result = json.loads((root / 'result.json').read_text())
+          assert module.digest(source / 'build-lock.json') == result['build_lock_sha256']
+          assert result['component'] == os.environ['COMPONENT']
+          tag = 'ws408-csi-' + os.environ['COMPONENT'] + ':' + os.environ['GITHUB_SHA']
+          assert result['tag'] == tag
+          for filename, field in [('image.tar', 'archive_sha256'), ('scan.json', 'scan_sha256'), ('sbom.spdx.json', 'sbom_sha256')]:
+              with (root / filename).open('rb') as stream:
+                  assert hashlib.file_digest(stream, 'sha256').hexdigest() == result[field]
+          scan = json.loads((root / 'scan.json').read_text())
+          subprocess.run(['docker', 'load', '--input', str(root / 'image.tar')], check=True)
+          image_id = subprocess.check_output(['docker', 'image', 'inspect', tag, '--format', '{{.Id}}'], text=True).strip()
+          assert image_id == result['image_id']
+          config_digest = module.archive_config_digest(root / 'image.tar', tag)
+          assert config_digest == result['config_digest']
+          module.validate_scan(scan, config_digest, lock['components'][os.environ['COMPONENT']]['binary'], policy['blocked_severities'])
+          name = 'ghcr.io/crewsbridge/csi-images/csi-' + os.environ['COMPONENT']
+          reference = name + ':sha-' + os.environ['GITHUB_SHA']
+          existing = subprocess.run(['docker', 'manifest', 'inspect', reference], capture_output=True, text=True)
+          if existing.returncode == 0:
+              raise RuntimeError('Source tag already exists; verify/recover its exact subject separately, never overwrite it')
+          if not any(message in existing.stderr.lower() for message in ['manifest unknown', 'no such manifest']):
+              raise RuntimeError('Registry absence could not be established; refusing publication')
+          subprocess.run(['docker', 'tag', image_id, reference], check=True)
+          subprocess.run(['docker', 'push', reference], check=True)
+          references = json.loads(subprocess.check_output(['docker', 'image', 'inspect', reference, '--format', '{{json .RepoDigests}}'], text=True))
+          digest = next(r.split('@', 1)[1] for r in references if r.startswith(name + '@'))
+          (root / 'published.json').write_text(json.dumps({'image': name + '@' + digest, 'source': os.environ['GITHUB_SHA'], 'image_id': image_id}, indent=2) + '\n')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('name=' + name + '\ndigest=' + digest + '\n')
+          PY
+      - name: Attest hosted build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest exact image SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          sbom-path: ${{ runner.temp }}/csi/sbom.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest exact image scan
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          predicate-type: https://aquasecurity.github.io/trivy/scan/v1
+          predicate-path: ${{ runner.temp }}/csi/scan.json
+          push-to-registry: true
+          create-storage-record: false
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: csi-published-${{ matrix.component }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/csi/published.json
+          if-no-files-found: error
+          retention-days: 90
